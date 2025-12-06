@@ -126,14 +126,14 @@ function Hero() {
           </a>
         </motion.div>
 
-        <motion.div className="social-links" variants={itemVariants}>
+        {/* <motion.div className="social-links" variants={itemVariants}>
           <a href="https://github.com/yourusername" target="_blank" rel="noopener noreferrer">
             <FaGithub />
           </a>
           <a href="https://linkedin.com/in/yourusername" target="_blank" rel="noopener noreferrer">
             <FaLinkedin />
           </a>
-        </motion.div>
+        </motion.div> */}
       </motion.div>
 
       <motion.div 
