@@ -1,0 +1,46 @@
+name: Deploy Portfolio to EC2
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build React app
+      run: npm run build
+      env:
+        CI: false
+    
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+    
+    - name: Deploy to EC2
+      run: |
+        ssh ubuntu@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/portfolio/dist"
+        scp -r dist/* ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/portfolio/dist/
+        ssh ubuntu@${{ secrets.EC2_HOST }} "sudo systemctl restart nginx"
+        
+    - name: Deployment Success
+      run: |
+        echo "✅ Deployment successful!"
+        echo "🌐 Your site is live at: http://${{ secrets.EC2_HOST }}"
