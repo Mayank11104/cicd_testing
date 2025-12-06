@@ -110,7 +110,7 @@ function Hero() {
         </motion.h1>
         
         <motion.h2 className="hero-subtitle" variants={itemVariants}>
-          DevOps Engineer | Cloud Architect | Automation Enthusiast
+          DevOps Engineer | Cloud Architect | Automation Enthusiast | AWS Explorer
         </motion.h2>
 
         <motion.p className="hero-description" variants={itemVariants}>
