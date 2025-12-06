@@ -33,12 +33,15 @@ jobs:
         echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+        chmod 644 ~/.ssh/known_hosts
     
     - name: Deploy to EC2
+      env:
+        SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       run: |
-        ssh ubuntu@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/portfolio/dist"
-        scp -r dist/* ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/portfolio/dist/
-        ssh ubuntu@${{ secrets.EC2_HOST }} "sudo systemctl restart nginx"
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/portfolio/dist"
+        scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa -r dist/* ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/portfolio/dist/
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} "sudo systemctl restart nginx"
         
     - name: Deployment Success
       run: |
