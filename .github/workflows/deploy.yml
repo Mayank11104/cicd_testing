@@ -28,22 +28,20 @@ jobs:
         CI: false
     
     - name: Deploy to EC2
-      env:
-        PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-        HOSTNAME: ${{ secrets.EC2_HOST }}
-        USER_NAME: ubuntu
-      run: |
-        echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
-        ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} '
-          mkdir -p /home/ubuntu/portfolio/dist
-        '
-        scp -o StrictHostKeyChecking=no -i private_key -r dist/* ${USER_NAME}@${HOSTNAME}:/home/ubuntu/portfolio/dist/
-        ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} '
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        source: "dist/*"
+        target: "/home/ubuntu/portfolio/"
+    
+    - name: Restart Nginx
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
           sudo systemctl restart nginx
           echo "Deployment successful!"
-        '
-        
-    - name: Deployment Success
-      run: |
-        echo "✅ Deployment successful!"
-        echo "🌐 Your site is live at: http://${{ secrets.EC2_HOST }}"
