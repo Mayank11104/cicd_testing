@@ -99,7 +99,7 @@ function Hero() {
           </div>
           <div className="terminal-body">
             <div className="terminal-line">
-              <span className="prompt">user@devops:~$</span> {text}
+              <span className="prompt">user@devopslearner:~$</span> {text}
               <span className={`cursor ${showCursor ? 'blink' : ''}`}>_</span>
             </div>
           </div>
