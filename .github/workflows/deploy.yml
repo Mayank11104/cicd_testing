@@ -1,4 +1,4 @@
-name: Deploy Portfolio to EC2
+name: Deploy with Docker to EC2
 
 on:
   push:
@@ -13,40 +13,24 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Build React app
-      run: npm run build
+    - name: Deploy to EC2 with Docker
       env:
-        CI: false
-    
-    - name: Deploy to EC2
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_SSH_KEY }}
-        source: "dist/"
-        target: "/home/ubuntu/portfolio/"
-        strip_components: 1
-        rm: true
-    
-    - name: Set Permissions and Restart Nginx
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          sudo chmod 755 /home/ubuntu
-          sudo chmod -R 755 /home/ubuntu/portfolio
-          sudo systemctl restart nginx
-          echo "✅ Deployment successful!"
-          echo "🌐 Site live at: http://${{ secrets.EC2_HOST }}"
+        SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        HOST: ${{ secrets.EC2_HOST }}
+      run: |
+        echo "$SSH_KEY" > key.pem
+        chmod 600 key.pem
+        
+        ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@$HOST "mkdir -p ~/portfolio"
+        scp -o StrictHostKeyChecking=no -i key.pem -r ./* ubuntu@$HOST:~/portfolio/
+        
+        ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@$HOST "
+          cd ~/portfolio &&
+          docker-compose down 2>/dev/null || true &&
+          docker-compose build --no-cache &&
+          docker-compose up -d &&
+          echo '✅ Docker container is running!' &&
+          docker ps
+        "
+        
+        echo "🚀 Deployed to http://$HOST"
