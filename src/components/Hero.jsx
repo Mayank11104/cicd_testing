@@ -99,14 +99,14 @@ function Hero() {
           </div>
           <div className="terminal-body">
             <div className="terminal-line">
-              <span className="prompt">user@devopslearner:~$</span> {text}
+              <span className="prompt">user@devops-learner:~$</span> {text}
               <span className={`cursor ${showCursor ? 'blink' : ''}`}>_</span>
             </div>
           </div>
         </motion.div>
 
         <motion.h1 className="hero-title" variants={itemVariants}>
-          Hi, I'm <span className="gradient-text">Your Name</span>
+          Hi, I'm <span className="gradient-text">MAYANK CHAUDHARI</span>
         </motion.h1>
         
         <motion.h2 className="hero-subtitle" variants={itemVariants}>
