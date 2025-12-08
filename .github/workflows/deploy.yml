@@ -1,36 +1,85 @@
-name: Deploy with Docker to EC2
+name: Docker Hub CI/CD Pipeline
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  DOCKER_IMAGE: ${{ secrets.DOCKER_USERNAME }}/portfolio
+
 jobs:
-  deploy:
+  build:
+    name: Build and Push to Docker Hub
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Deploy to EC2 with Docker
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+    
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ env.DOCKER_IMAGE }}:latest
+          ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+        cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache
+        cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache,mode=max
+    
+    - name: Image Info
+      run: |
+        echo "✅ Image built and pushed to Docker Hub!"
+        echo "📦 Image: ${{ env.DOCKER_IMAGE }}:latest"
+
+  deploy:
+    name: Deploy to EC2
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Deploy to EC2
       env:
         SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
         HOST: ${{ secrets.EC2_HOST }}
+        IMAGE: ${{ secrets.DOCKER_USERNAME }}/portfolio:latest
       run: |
         echo "$SSH_KEY" > key.pem
         chmod 600 key.pem
         
-        ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@$HOST "mkdir -p ~/portfolio"
-        scp -o StrictHostKeyChecking=no -i key.pem -r ./* ubuntu@$HOST:~/portfolio/
-        
         ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@$HOST "
-          cd ~/portfolio &&
-          docker-compose down 2>/dev/null || true &&
-          docker-compose build --no-cache &&
-          docker-compose up -d &&
-          echo '✅ Docker container is running!' &&
+          echo 'Pulling latest image from Docker Hub...' &&
+          docker pull $IMAGE &&
+          
+          echo 'Stopping old container...' &&
+          docker stop portfolio-app 2>/dev/null || true &&
+          docker rm portfolio-app 2>/dev/null || true &&
+          
+          echo 'Starting new container...' &&
+          docker run -d \
+            --name portfolio-app \
+            -p 80:80 \
+            --restart unless-stopped \
+            $IMAGE &&
+          
+          echo 'Cleaning up old images...' &&
+          docker image prune -af &&
+          
+          echo '✅ Deployment successful!' &&
           docker ps
         "
         
-        echo "🚀 Deployed to http://$HOST"
+    - name: Deployment Complete
+      run: |
+        echo "🚀 Portfolio deployed successfully!"
+        echo "🌐 Live at: http://${{ secrets.EC2_HOST }}"
